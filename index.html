@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#070b14">
+<meta name="description" content="ActionLog — open the front camera and follow a person's actions and speech in real time, on your own device.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ActionLog">
+<title>ActionLog — Live action &amp; speech tracker</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ── top bar ─────────────────────────────────────────────────── -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">
+        <svg viewBox="0 0 32 32" width="26" height="26" fill="none">
+          <circle cx="16" cy="16" r="13" stroke="currentColor" stroke-width="2" opacity=".45"/>
+          <path d="M5 16h4l3-7 4 14 3-9 2.5 4H27" stroke="currentColor" stroke-width="2.2"
+                stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </span>
+      <div class="brand-text">
+        <h1>ActionLog</h1>
+        <p>Live action &amp; speech tracking</p>
+      </div>
+    </div>
+    <div class="top-right">
+      <span id="clock" class="clock">00:00:00</span>
+      <span id="statusDot" class="dot" title="Idle"></span>
+    </div>
+  </header>
+
+  <div id="secureWarn" class="banner warn" hidden>
+    ⚠️ Camera and microphone need a secure connection. Open this page over
+    <b>https://</b> (or <b>http://localhost</b>) — a plain <code>file://</code> page will not work.
+  </div>
+  <div id="camWarn" class="banner warn" hidden></div>
+  <div id="permWarn" class="banner warn" hidden></div>
+  <div id="modelBanner" class="banner info" hidden></div>
+
+  <!-- ── camera stage ────────────────────────────────────────────── -->
+  <section class="stage">
+    <div class="cam" id="cam">
+      <video id="video" playsinline autoplay muted></video>
+      <canvas id="overlay"></canvas>
+
+      <div class="cam-hud">
+        <span class="chip" id="hudAction">—</span>
+        <span class="chip ghost" id="hudFps">0 fps</span>
+        <span class="chip ghost" id="hudModel">model: …</span>
+      </div>
+
+      <div class="cam-center" id="camCenter">
+        <button id="btnStartBig" class="big-btn" type="button">
+          <span class="big-ico">▶</span>
+          <span id="btnStartLabel">Start session</span>
+        </button>
+        <p id="camHint">Opens the front camera, watches the person in view and writes down what they say.</p>
+      </div>
+
+      <div class="cam-tools">
+        <button id="btnFlip" class="icon-btn" type="button" title="Switch camera" aria-label="Switch camera">🔄</button>
+        <button id="btnShot" class="icon-btn" type="button" title="Save snapshot" aria-label="Save snapshot">📷</button>
+        <button id="btnFullscreen" class="icon-btn" type="button" title="Fullscreen" aria-label="Fullscreen">⛶</button>
+      </div>
+
+      <div class="rec-badge" id="recBadge" hidden><i></i> REC</div>
+    </div>
+
+    <!-- now card + controls -->
+    <div class="side">
+      <div class="now-card">
+        <span class="now-icon" id="nowIcon">🙂</span>
+        <div class="now-text">
+          <strong id="nowLabel">Waiting to start</strong>
+          <span id="nowSub">Nothing detected yet</span>
+        </div>
+        <div class="meter" title="Pose confidence"><i id="confBar" style="width:0%"></i></div>
+      </div>
+
+      <div class="controls">
+        <button id="btnMic" class="pill on" type="button">🎙 <span>Mic on</span></button>
+        <label class="lang">
+          <span class="sr">Speech language</span>
+          <select id="selLang" title="Speech language">
+            <option value="en-US">English (US)</option>
+            <option value="en-GB">English (UK)</option>
+            <option value="zh-TW">中文 (繁體)</option>
+            <option value="zh-CN">中文 (简体)</option>
+            <option value="zh-HK">中文 (香港)</option>
+            <option value="ja-JP">日本語</option>
+            <option value="ko-KR">한국어</option>
+            <option value="es-ES">Español</option>
+            <option value="fr-FR">Français</option>
+            <option value="de-DE">Deutsch</option>
+            <option value="it-IT">Italiano</option>
+            <option value="pt-BR">Português</option>
+            <option value="ru-RU">Русский</option>
+            <option value="hi-IN">हिन्दी</option>
+            <option value="th-TH">ไทย</option>
+            <option value="vi-VN">Tiếng Việt</option>
+            <option value="id-ID">Bahasa Indonesia</option>
+            <option value="ms-MY">Bahasa Melayu</option>
+          </select>
+        </label>
+        <button id="btnClear" class="pill" type="button">🗑 <span>Clear</span></button>
+        <button id="btnExport" class="pill accent" type="button">⬇ <span>Export</span></button>
+      </div>
+
+      <div class="quick">
+        <div class="q"><b id="qActions">0</b><span>actions</span></div>
+        <div class="q"><b id="qSpeech">0</b><span>speeches</span></div>
+        <div class="q"><b id="qWords">0</b><span>words</span></div>
+        <div class="q"><b id="qMotion">0%</b><span>motion</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── tabs ────────────────────────────────────────────────────── -->
+  <nav class="tabs" role="tablist">
+    <button class="tab active" data-tab="timeline" role="tab" aria-selected="true">
+      Timeline <b id="cntEvents">0</b>
+    </button>
+    <button class="tab" data-tab="transcript" role="tab" aria-selected="false">
+      Transcript <b id="cntSpeech">0</b>
+    </button>
+    <button class="tab" data-tab="stats" role="tab" aria-selected="false">Stats</button>
+  </nav>
+
+  <main class="panels">
+
+    <section id="panel-timeline" class="panel active" role="tabpanel">
+      <div class="filter-row">
+        <div class="chips">
+          <button class="fchip active" data-filter="all" type="button">All</button>
+          <button class="fchip" data-filter="action" type="button">Actions</button>
+          <button class="fchip" data-filter="speech" type="button">Speech</button>
+          <button class="fchip" data-filter="system" type="button">System</button>
+        </div>
+        <label class="chk"><input type="checkbox" id="autoScroll" checked> auto-scroll</label>
+      </div>
+      <ul id="timeline" class="timeline">
+        <li class="empty" id="tlEmpty">Events will appear here once the session starts.</li>
+      </ul>
+    </section>
+
+    <section id="panel-transcript" class="panel" role="tabpanel">
+      <div class="interim" id="interimBox" hidden>
+        <span class="live-dot"></span>
+        <span id="interimText">listening…</span>
+      </div>
+      <div id="transcript" class="transcript">
+        <p class="empty" id="trEmpty">Nothing has been said yet — or the microphone is off.</p>
+      </div>
+    </section>
+
+    <section id="panel-stats" class="panel" role="tabpanel">
+      <div class="stats-grid" id="statsGrid"></div>
+      <h3 class="sec">Time spent by action</h3>
+      <div class="bars" id="bars"><p class="empty">No data yet.</p></div>
+      <h3 class="sec">Detected actions</h3>
+      <div class="chips stat-chips" id="statChips"><p class="empty">No data yet.</p></div>
+    </section>
+
+  </main>
+
+  <footer class="foot">
+    <p>On-device only — video and audio are processed in this browser and never uploaded.</p>
+    <p class="tiny">Action labels are heuristic estimates from a single 2-D pose; treat them as a guide, not a certainty.
+      Speech uses your browser's built-in recogniser and needs a network connection.</p>
+  </footer>
+</div>
+
+<!-- ── export modal ────────────────────────────────────────────────── -->
+<div class="modal" id="modal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-head">
+      <h2 id="modalTitle">Export session</h2>
+      <button class="icon-btn" id="modalClose" type="button" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody">
+      <button class="dl" data-fmt="txt" type="button">
+        <b>TXT</b><span>Readable log — timeline + transcript</span></button>
+      <button class="dl" data-fmt="csv" type="button">
+        <b>CSV</b><span>One row per event — open in Excel / Sheets</span></button>
+      <button class="dl" data-fmt="json" type="button">
+        <b>JSON</b><span>Full structured session data</span></button>
+      <button class="dl" data-fmt="srt" type="button">
+        <b>SRT</b><span>Timed captions of everything said</span></button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.min.js"></script>
+<script src="./js/actions.js"></script>
+<script src="./js/pose-engine.js"></script>
+<script src="./js/app.js"></script>
+</body>
+</html>

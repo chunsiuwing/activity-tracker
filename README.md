@@ -1,5 +1,7 @@
 # ActionLog — live action & speech tracker
 
+> **Live:** <https://chunsiuwing.github.io/activity-tracker/>
+
 Open the phone's **front camera**, follow the person in view, and write down
 **what they do** and **what they say** — live, on one screen.
 
@@ -38,6 +40,25 @@ blocked; the options are:
 
 Once served over https, the manifest makes it installable: **Add to Home
 Screen** gives a full-screen app with its own icon.
+
+---
+
+## Deploy (GitHub Pages)
+
+The site above is published from this repo:
+
+```bash
+gh repo create activity-tracker --public --source=. --push   # once
+gh api repos/chunsiuwing/activity-tracker/pages -X POST \
+    -f "source[branch]=main" -f "source[path]=/"             # once
+```
+
+Pushes to `main` republish automatically in ~1 minute. Every path in the app
+is relative (`./…`), so it works unchanged at a domain root or a sub-path.
+
+To publish from somewhere else (Netlify, Cloudflare Pages, your own nginx),
+just serve the directory's contents — there is nothing to build. The only
+requirements are HTTPS and serving `.webmanifest` as `application/manifest+json`.
 
 ---
 
